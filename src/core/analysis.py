@@ -4,7 +4,7 @@ import dotenv
 from langchain.schema import HumanMessage
 from langchain_groq import ChatGroq
 
-# Load your .env (GROQ_API_KEY)
+# Load your .env (GROQ_API_KEY and optional GROQ_MODEL)
 dotenv.load_dotenv()
 
 def analyze_security(semgrep_results: dict, code_text: str, model_name="deepseek-r1-distill-llama-70b", temperature=0.0) -> str:
@@ -31,13 +31,22 @@ def analyze_security(semgrep_results: dict, code_text: str, model_name="deepseek
 
     # 3. Create prompt
     prompt = (
-        "You are a security assistant. Read the code and the Semgrep results, "
-        "then explain each issue in plain English and suggest practical fixes.\n\n"
+        "You are a security assistant.\n"
+        "You will receive a code file and Semgrep results in JSON format.\n"
+        "Your task is to analyze the code and explain each security issue found by Semgrep in clear, simple language.\n"
+        "For each issue, explain what the vulnerability is, why it's dangerous, and how to fix it.\n"
+        "Then at the end, under a heading called 'Fix:', provide the corrected version of the code.\n\n"
         "=== Code ===\n"
         f"{code_text}\n\n"
         "=== Semgrep Findings (JSON) ===\n"
-        f"{semgrep_results}"
+        f"{semgrep_results}\n\n"
+        "Output your response in this structure:\n"
+        "1. 📌 Summary of issues\n"
+        "2. 🛠 Explanation of each issue and suggested fix\n"
+        "3. 🧩 Final Fix:\n"
+        "Fix:\n```<language>\n<corrected code here>\n```"
     )
+
 
     messages = [HumanMessage(content=prompt)]
 
