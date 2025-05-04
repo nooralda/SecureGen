@@ -1,6 +1,7 @@
 import os
 import tempfile
 from datetime import datetime
+import zipfile
 
 def save_uploaded_file(uploaded_file):
     """
@@ -40,35 +41,59 @@ def read_file_content(file_path):
             return f.read()
     except Exception as e:
         return f"Error reading file: {str(e)}"
+def get_files_from_folder(folder_path, max_files=500, allowed_exts=None):
+    """
+    Recursively collect code files from all folders.
 
-def get_files_from_folder(folder_path, max_files=5):
-    """
-    Collect code files from a folder.
-    
-    Args:
-        folder_path (str): Path to the folder
-        max_files (int): Maximum number of files to collect
-    
     Returns:
-        dict: Mapping of file paths to their contents
+        dict: { absolute_path: file_content }
     """
+    if allowed_exts is None:
+        allowed_exts = [".py", ".js", ".java", ".cpp", ".c", ".cs", ".php", ".rb", ".go", ".ts", ".html", ".css", ".sql"]
+
     code_files = {}
-    file_count = 0
-    
-    for file in os.listdir(folder_path):
-        if file_count >= max_files:
-            break
-        
-        file_path = os.path.join(folder_path, file)
-        if os.path.isfile(file_path) and not file.startswith('.'):
-            try:
-                with open(file_path, 'r') as f:
-                    code_files[file_path] = f.read()
-                    file_count += 1
-            except:
-                pass
-    
+    count = 0
+
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            if count >= max_files:
+                return code_files
+            if any(file.endswith(ext) for ext in allowed_exts):
+                full_path = os.path.join(root, file)
+                try:
+                    with open(full_path, "r", encoding="utf-8") as f:
+                        code_files[full_path] = f.read()
+                        count += 1
+                except Exception:
+                    pass
+
     return code_files
+
+
+import zipfile
+import tempfile
+
+def extract_zip_to_temp(uploaded_zip):
+    """
+    Extracts uploaded ZIP file to a unique temp directory.
+
+    Args:
+        uploaded_zip (Streamlit file): Uploaded ZIP file from user
+
+    Returns:
+        str: Path to extracted root folder
+    """
+    temp_dir = tempfile.mkdtemp()
+    zip_path = os.path.join(temp_dir, "uploaded.zip")
+
+    with open(zip_path, "wb") as f:
+        f.write(uploaded_zip.getbuffer())
+
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        zip_ref.extractall(temp_dir)
+
+    return temp_dir
+
 
 def save_code_to_temp_file(code_content, file_extension=".py"):
     """
