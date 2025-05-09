@@ -1,0 +1,5 @@
+streamlit
+langchain-groq
+semgrep
+python-dotenv
+pyyaml
