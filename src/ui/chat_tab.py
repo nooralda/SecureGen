@@ -1,5 +1,7 @@
 import streamlit as st
 import os
+import base64
+from datetime import datetime
 from langchain.schema import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 
@@ -47,7 +49,6 @@ def render_chat_tab(model_selection, temperature):
                         max_retries=2
                     )
 
-                    # Restrictive system prompt
                     system_prompt = """
 You are a secure code assistant. ONLY answer questions about:
 - static analysis
@@ -81,11 +82,7 @@ Use the provided code or file context to answer.
                     with st.spinner("💬 Thinking..."):
                         result = llm.generate([messages])
                         generation = result.generations[0][0]
-
-                        if hasattr(generation, "message"):
-                            llm_reply = generation.message.content
-                        else:
-                            llm_reply = generation.text
+                        llm_reply = getattr(generation, "message", generation).content
 
                         st.session_state.chat_history.append(("You", user_input))
                         st.session_state.chat_history.append(("SecureGen", llm_reply))
@@ -96,31 +93,27 @@ Use the provided code or file context to answer.
     with col2:
         if st.button("🗑️ Clear Chat"):
             st.session_state.chat_history = []
-            st.success("✅ Chat history cleared.")
+            st.success("Chat history cleared.")
 
     if st.session_state.chat_history:
         st.subheader("💬 Save Chat History")
 
         if st.button("💾 Save Chat to File"):
             try:
-                from datetime import datetime
-                import base64
-
                 chat_lines = []
                 for speaker, message in st.session_state.chat_history:
-                    chat_lines.append(f"**{speaker}:** {message}")
+                    chat_lines.append(f"{speaker}: {message}")
 
                 chat_text = "\n\n".join(chat_lines)
-                filename = f"chat_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+                filename = f"chat_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
 
                 with open(filename, "w", encoding="utf-8") as f:
                     f.write(chat_text)
 
                 with open(filename, "rb") as f:
-                    chat_bytes = f.read()
+                    b64 = base64.b64encode(f.read()).decode()
 
-                b64 = base64.b64encode(chat_bytes).decode()
-                href = f'<a href="data:file/markdown;base64,{b64}" download="{filename}">📥 Download Chat History</a>'
+                href = f'<a href="data:file/txt;base64,{b64}" download="{filename}">📥 Download Chat History as TXT</a>'
                 st.markdown(href, unsafe_allow_html=True)
 
             except Exception as e:
@@ -132,4 +125,15 @@ Use the provided code or file context to answer.
                     st.markdown(message)
             else:
                 with st.chat_message("assistant"):
-                    st.markdown(message)
+                    if "<think>" in message and "</think>" in message:
+                        think_start = message.find("<think>")
+                        think_end = message.find("</think>") + len("</think>")
+                        thinking = message[think_start:think_end]
+                        rest = message.replace(thinking, "").strip()
+
+                        with st.expander("🤖 LLM Internal Reasoning (click to view)"):
+                            st.markdown(thinking.replace("<think>", "").replace("</think>", "").strip())
+
+                        st.markdown(rest)
+                    else:
+                        st.markdown(message)
