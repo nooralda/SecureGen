@@ -41,7 +41,7 @@ def read_file_content(file_path):
             return f.read()
     except Exception as e:
         return f"Error reading file: {str(e)}"
-def get_files_from_folder(folder_path, max_files=500, allowed_exts=None):
+def get_files_from_folder(folder_path, max_files=2000, allowed_exts=None):
     """
     Recursively collect code files from all folders.
 
@@ -95,31 +95,29 @@ def extract_zip_to_temp(uploaded_zip):
     return temp_dir
 
 
-def save_code_to_temp_file(code_content, file_extension=".py"):
+def save_code_to_temp_file(code_content, extension="py"):
     """
     Save code content to a temporary file.
     
     Args:
         code_content (str): Code content to save
-        file_extension (str): File extension to use (default: .py)
+        extension (str): File extension (e.g., 'js', 'java', 'py')
     
     Returns:
         str: Path to the saved temporary file
     """
-    # Create temp dir if it doesn't exist
     temp_dir = "temp_code"
     os.makedirs(temp_dir, exist_ok=True)
     
-    # Generate a unique filename using timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"code_{timestamp}{file_extension}"
+    filename = f"code_{timestamp}.{extension}"
     file_path = os.path.join(temp_dir, filename)
     
-    # Save the code content
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(code_content)
     
     return file_path
+
 
 def generate_report(code_content, llm_analysis):
     """
