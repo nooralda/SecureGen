@@ -18,6 +18,28 @@ from src.core.file_utils import (
 def render_scanner_tab(model_selection, temperature, semgrep_config_mode, uploaded_rule_file):
     st.header("📊 Scanner")
 
+    compare_llms = st.checkbox("Compare Two LLMs?")
+    second_model = None
+    if compare_llms:
+        second_model = st.selectbox("Select Second LLM Model", [
+                    "deepseek-r1-distill-llama-70b",
+                    "allam-2-7b",
+                    "compound-beta",
+                    "compound-beta-mini",
+                    "gemma2-9b-it",
+                    "llama-3.1-8b-instant",
+                    "llama-3.3-70b-versatile",
+                    "llama-guard-3-8b",
+                    "llama3-70b-8192",
+                    "llama3-8b-8192",
+                    "meta-llama/llama-4-maverick-17b-128e-instruct",
+                    "meta-llama/llama-4-scout-17b-16e-instruct",
+                    "mistral-saba-24b",
+                    "qwen-qwq-32b"
+        ], index=1)
+
+
+    
     scan_mode = st.radio(
         "Choose scan method:",
         (
@@ -85,7 +107,6 @@ def render_scanner_tab(model_selection, temperature, semgrep_config_mode, upload
                         st.markdown(
                             f"**{i}. {color} [{severity}]** `{rule_id}` at line {line}: {message}"
                         )
-
                 else:
                     st.success("No issues found in this file!")
 
@@ -96,14 +117,21 @@ def render_scanner_tab(model_selection, temperature, semgrep_config_mode, upload
 
                 st.subheader("LLM Analysis")
                 st.markdown(f"Time: {llm_time}s")
-                if "Fix:" in llm_response:
-                    explanation, fix = llm_response.split("Fix:", 1)
-                    st.markdown("### 💡 Explanation")
-                    st.markdown(explanation.strip())
-                    st.markdown("### 🛠 Suggested Fix")
-                    st.code(fix.strip(), language="java")
+
+                if "<think>" in llm_response and "</think>" in llm_response:
+                    think_start = llm_response.find("<think>")
+                    think_end = llm_response.find("</think>") + len("</think>")
+                    thinking = llm_response[think_start:think_end]
+                    rest = llm_response.replace(thinking, "").strip()
+
+                    with st.expander("🤖 LLM Internal Reasoning (click to view)"):
+                        st.markdown(thinking.replace("<think>", "").replace("</think>", "").strip())
+
+                    st.markdown(rest)
                 else:
-                    st.write(llm_response)
+                    st.markdown(llm_response)
+
+                full_report = generate_report(selected_code, llm_response) + "\n\n---\n\n"
 
                 st.subheader("📊 Full Repo Scan Summary")
                 total_files = len(repo_files)
@@ -122,6 +150,14 @@ def render_scanner_tab(model_selection, temperature, semgrep_config_mode, upload
                     "Count": [total_files, total_issues, num_file_issues]
                 })
                 st.bar_chart(summary_df.set_index("Metric"))
+
+                st.subheader("📄 Download Report")
+                with open("temp_full_report.md", "w", encoding="utf-8") as f:
+                    f.write(full_report)
+                with open("temp_full_report.md", "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode()
+                href = f'<a href="data:file/markdown;base64,{b64}" download="SecureGen_Report.md">📥 Download</a>'
+                st.markdown(href, unsafe_allow_html=True)
 
             return  # skip other scan modes
 
@@ -151,9 +187,13 @@ def render_scanner_tab(model_selection, temperature, semgrep_config_mode, upload
     elif scan_mode == "📝 Paste Code Manually":
         pasted_code = st.text_area("Paste your code here:", height=300)
         if pasted_code:
-            path = save_code_to_temp_file(pasted_code)
+            lang_extension = st.selectbox("Select the language of your code:", [
+                "py", "js", "java", "cpp", "c", "cs", "php", "rb", "go", "ts", "html", "css", "sql"
+            ])
+            path = save_code_to_temp_file(pasted_code, extension=lang_extension)
             code_contents.append(pasted_code)
             file_paths.append(path)
+
 
     if file_paths and code_contents:
         if st.button("🔍 Run Scan"):
@@ -179,9 +219,8 @@ def render_scanner_tab(model_selection, temperature, semgrep_config_mode, upload
                 total_issues += issue_count
 
                 st.subheader(f"📄 Semgrep Results for {os.path.basename(path)}")
-                st.json(results)  # Show full Semgrep output
-                st.info(f"Found {issue_count} issues (⏱️ {scan_time}s)")
-
+                st.json(results)
+                st.info(f"Found {issue_count} issues ({scan_time}s)")
 
                 if issue_count:
                     st.markdown("### 🚨 Issue List")
@@ -199,27 +238,43 @@ def render_scanner_tab(model_selection, temperature, semgrep_config_mode, upload
                         }.get(severity, "⚪")
 
                         st.markdown(f"**{i}. {color} [{severity}]** `{rule_id}` at line {line}: {message}")
-
                 else:
                     st.success("No issues found in this file!")
 
-                with st.spinner("Analyzing with LLM..."):
-                    start = time.time()
-                    llm_response = analyze_security(results, content, model_selection, temperature)
-                    llm_time = round(time.time() - start, 2)
+                def render_llm_analysis(results, code, model_name):
+                    with st.spinner(f"Analyzing with {model_name}..."):
+                        start = time.time()
+                        response = analyze_security(results, code, model_name, temperature)
+                        llm_time = round(time.time() - start, 2)
 
-                st.subheader(" LLM Analysis")
-                st.markdown(f"Time: {llm_time}s")
-                if "Fix:" in llm_response:
-                    explanation, fix = llm_response.split("Fix:", 1)
-                    st.markdown("### 💡 Explanation")
-                    st.markdown(explanation.strip())
-                    st.markdown("### 🛠 Suggested Fix")
-                    st.code(fix.strip(), language="java")
+                    st.markdown(f" Time with {model_name}: {llm_time}s")
+
+                    if "<think>" in response and "</think>" in response:
+                        think_start = response.find("<think>")
+                        think_end = response.find("</think>") + len("</think>")
+                        thinking = response[think_start:think_end]
+                        rest = response.replace(thinking, "").strip()
+
+                        with st.expander(f"🤖 {model_name} Reasoning (click to view)"):
+                            st.markdown(thinking.replace("<think>", "").replace("</think>", "").strip())
+                        st.markdown(rest)
+                    else:
+                        st.markdown(response)
+
+                    return generate_report(code, response)
+
+                # === Replace single-model block with this:
+                st.subheader("LLM Analysis")
+                report_1 = render_llm_analysis(results, content, model_selection)
+
+                if compare_llms and second_model:
+                    st.markdown("---")
+                    st.subheader(f"Comparison: {second_model}")
+                    report_2 = render_llm_analysis(results, content, second_model)
+                    full_report += f"Model 1: {model_selection}\n{report_1}\n\n---\n\nModel 2: {second_model}\n{report_2}\n\n---\n\n"
                 else:
-                    st.write(llm_response)
+                    full_report += report_1 + "\n\n---\n\n"
 
-                full_report += generate_report(content, llm_response) + "\n\n---\n\n"
 
             st.subheader("📊 Scan Summary")
             col1, col2 = st.columns(2)
@@ -230,9 +285,16 @@ def render_scanner_tab(model_selection, temperature, semgrep_config_mode, upload
             st.bar_chart(df.set_index("Metric"))
 
             st.subheader("📄 Download Report")
-            with open("temp_full_report.md", "w", encoding="utf-8") as f:
+            txt_path = "SecureGen_Report.txt"
+
+            # Write report to .txt file
+            with open(txt_path, "w", encoding="utf-8") as f:
                 f.write(full_report)
-            with open("temp_full_report.md", "rb") as f:
-                b64 = base64.b64encode(f.read()).decode()
-            href = f'<a href="data:file/markdown;base64,{b64}" download="SecureGen_Report.md">📥 Download</a>'
-            st.markdown(href, unsafe_allow_html=True)
+
+            # Encode for download
+            with open(txt_path, "rb") as f:
+                b64_txt = base64.b64encode(f.read()).decode()
+
+            # Download link
+            download_link = f'<a href="data:file/txt;base64,{b64_txt}" download="SecureGen_Report.txt">📥 Download Report as TXT</a>'
+            st.markdown(download_link, unsafe_allow_html=True)
