@@ -116,7 +116,7 @@ We used the following codebases and supporting materials as part of our evaluati
 
 #### 1. Mutillidae
 - Repository: [Mutillidae GitHub](https://github.com/webpwnized/mutillidae/blob/73d6a092a1cc74580775b2ee510926fa81d0b46d/src/classes/MySQLHandler.php#L144)
-- Ground Truth: [OWASP Top 10 in Mutillidae - Part 2](https://mislusnys.github.io/post/2015-02-06-owasp-top-10-in-mutillidae-part-2/)
+- Ground Truth: [OWASP Top 10 in Mutillidae - Part 1](https://mislusnys.github.io/post/2015-02-03-owasp-top-10-in-mutillidae/) and [OWASP Top 10 in Mutillidae - Part 2](https://mislusnys.github.io/post/2015-02-06-owasp-top-10-in-mutillidae-part-2/)
 
 #### 2. OWASP Juice Shop
 - Repository: [Juice Shop GitHub](https://github.com/juice-shop/juice-shop)
