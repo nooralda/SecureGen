@@ -129,6 +129,21 @@ We used the following codebases and supporting materials as part of our evaluati
 #### 4. OWASP Benchmark Java
 - Repository: [OWASP BenchmarkJava GitHub](https://github.com/OWASP-Benchmark/BenchmarkJava/tree/master)
 - Ground Truth File: `expectedresults-1.2.csv`
+---
+## Evaluation Setup
+
+To evaluate SecureGen, no special scripts or configurations are needed. Simply follow these steps:
+
+1. Launch the app:
+   ```bash
+   streamlit run app.py
+
+2. Navigate to the "Scanner" tab
+3. Upload any of the vulnerable codebases in the format of your choice
+4. SecureGen will automatically:
+  - Run Semgrep on your uploaded files
+  - Use Groq-hosted LLMs to generate explanations and remediation suggestions
+  - Display severity levels and detected issues in the interface
 
 ---
 ## Notes
