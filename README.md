@@ -110,6 +110,27 @@ This will launch the SecureGen interface in your browser.
 
 ---
 
+### Evaluation Targets and Ground Truth Sources
+
+We used the following codebases and supporting materials as part of our evaluation:
+
+#### 1. Mutillidae
+- Repository: [Mutillidae GitHub](https://github.com/webpwnized/mutillidae/blob/73d6a092a1cc74580775b2ee510926fa81d0b46d/src/classes/MySQLHandler.php#L144)
+- Ground Truth: [OWASP Top 10 in Mutillidae - Part 2](https://mislusnys.github.io/post/2015-02-06-owasp-top-10-in-mutillidae-part-2/)
+
+#### 2. OWASP Juice Shop
+- Repository: [Juice Shop GitHub](https://github.com/juice-shop/juice-shop)
+- Ground Truth: [Blog - Discovering Vulnerabilities in Juice Shop](https://infosecwriteups.com/hacking-owasp-juice-shop-part-1-discovering-vulnerabilities-b85e974fb3e5)
+
+#### 3. DVWA (Damn Vulnerable Web Application)
+- Repository: [DVWA GitHub](https://github.com/digininja/DVWA)
+- Ground Truth: [Medium Post - OWASP Top 10 Testing with DVWA](https://medium.com/@rajasaud260/mastering-web-security-testing-owasp-top-10-with-dvwa-814b0d43422e)
+
+#### 4. OWASP Benchmark Java
+- Repository: [OWASP BenchmarkJava GitHub](https://github.com/OWASP-Benchmark/BenchmarkJava/tree/master)
+- Ground Truth File: `expectedresults-1.2.csv`
+
+---
 ## Notes
 
 - The app uses Groq-hosted LLMs. Be mindful of token limits if analyzing large files.
